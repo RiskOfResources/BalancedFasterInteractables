@@ -19,17 +19,38 @@ namespace RiskOfResources;
 [BepInPlugin(identifier, nameof(BalancedFasterInteractables), version)]
 class BalancedFasterInteractables : BaseUnityPlugin
 {
-	public const string version = "0.0.0", identifier = "com.riskofresources.fast.interactable";
+	public const string version = "1.0.0", identifier = "com.riskofresources.fast.interactable";
 
 	static ConfigEntry<bool> teleporter, penalty;
 	static ConfigEntry<float> speed;
 
 	protected void Awake()
 	{
-		teleporter = Config.Bind("General", "Only After Teleporter", true, "");
-		penalty = Config.Bind("General", "Time Penalty", true, "");
-		speed = Config.Bind("General", "Speed", 75f,
-				new ConfigDescription("", new AcceptableValueRange<float>(0, 100)));
+		const string section = "General";
+
+		teleporter = Config.Bind(
+				section, key: "Only After Teleporter",
+				defaultValue: true,
+				description:
+					"By default, this plugin will only take effect on stages with a " +
+					"teleporter, after it has been charged."
+			);
+
+		penalty = Config.Bind(
+				section, key: "Time Penalty",
+				defaultValue: true,
+				description:
+					"Any time taken off the activation will be directly added to the game " +
+					"stopwatch."
+			);
+
+		speed = Config.Bind(
+				section, key: "Speed",
+				defaultValue: 75f,
+				new ConfigDescription(
+					"Time to complete each interaction is reduced by this percentage.",
+					new AcceptableValueRange<float>(0, 100))
+			);
 
 		Harmony.CreateAndPatchAll(typeof(BalancedFasterInteractables));
 	}
@@ -65,7 +86,7 @@ class BalancedFasterInteractables : BaseUnityPlugin
 				break;
 
 			case ScrappingToIdle:
-				time *= Scrapping.duration * 0.25f;
+				time *= ScrappingToIdle.duration * 0.5f;
 				break;
 
 			default:

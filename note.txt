@@ -1,0 +1,32 @@
+
+Duplicator
+	PurchaseInteraction.onPurchase
+		SetAvailable(false)
+		DelayedEvent.CallDelayed(4)
+		EntityStateMachine.SetNextStateToMain
+			Duplicating.FixedUpdate
+				initialDelayDuration: 1.5
+				BeginCooking
+				timeBetweenStartAndDropDroplet: 1.333
+				DropDroplet
+	DelayedEvent.action
+		PurchaseInteraction.SetAvailable(true)
+
+Scrapper
+	ScrapperController.BeginScrapping
+		EntityStateMachine.SetNextState
+			WaitToBeginScrapping.duration: 1.5
+			Scrapping.duration: 2
+			ScrappingToIdle.duration: 1
+				PickupDropletController.CreatePickupDroplet
+				...
+				ScrappingToIdle.duration / 2: 0.5
+			Idle
+
+ShrineChance
+	PurchaseInteraction.onPurchase
+		SetAvailable(false)
+		ShrineChanceBehavior.AddShrineStack
+			FixedUpdate
+				refreshTimer: 2
+				PurchaseInteraction.SetAvailable(true)

@@ -1,0 +1,10 @@
+{
+	"name": "BalancedFasterInteractables",
+	"version_number": "1.0.0",
+	"website_url": "https://www.riskofresources.com/discord",
+	"description":
+		"Scrappers, printers, and shrines activate quickly after teleporter, with a time penalty.",
+	"dependencies": [
+			"bbepis-BepInExPack-5.4.2100"
+		]
+}
