@@ -17,9 +17,12 @@ using UnityEngine.Networking;
 namespace RiskOfResources;
 
 [BepInPlugin(identifier, nameof(BalancedFasterInteractables), version)]
+[BepInIncompatibility("riskofresources.FasterInteractableBalancer")]
+[BepInIncompatibility("FlyingComputer.ExchangeChanges")]
+[BepInIncompatibility("Felda.ActuallyFaster")]
 class BalancedFasterInteractables : BaseUnityPlugin
 {
-	public const string version = "1.0.0", identifier = "com.riskofresources.fast.interactable";
+	public const string version = "0.1.0", identifier = "com.riskofresources.fast.interactable";
 
 	static ConfigEntry<bool> teleporter, penalty;
 	static ConfigEntry<float> speed;
