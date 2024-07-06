@@ -30,3 +30,13 @@ ShrineChance
 			FixedUpdate
 				refreshTimer: 2
 				PurchaseInteraction.SetAvailable(true)
+
+Chest
+	PurchaseInteraction.onPurchase
+		SetAvailable(false)
+		ChestBehavior.Open
+			Opening.duration: 2
+			PlayAnimation
+	ModelLocator.modelTransform
+		AnimationEvents: 0.9
+			ChestBehavior.ItemDrop

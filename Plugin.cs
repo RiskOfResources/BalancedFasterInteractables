@@ -1,6 +1,7 @@
 using BepInEx;
 using BepInEx.Configuration;
 using EntityStates;
+using EntityStates.Barrel;
 using EntityStates.Duplicator;
 using EntityStates.Scrapper;
 using HarmonyLib;
@@ -22,10 +23,11 @@ namespace RiskOfResources;
 [BepInIncompatibility("Felda.ActuallyFaster")]
 class BalancedFasterInteractables : BaseUnityPlugin
 {
-	public const string version = "0.1.0", identifier = "com.riskofresources.fast.interactable";
+	public const string version = "1.1.0", identifier = "com.riskofresources.fast.interactable";
 
 	static ConfigEntry<bool> teleporter, penalty;
 	static ConfigEntry<float> speed;
+	static ConfigEntry<bool> print, scrap, shrine, chest;
 
 	protected void Awake()
 	{
@@ -55,31 +57,48 @@ class BalancedFasterInteractables : BaseUnityPlugin
 					new AcceptableValueRange<float>(0, 100))
 			);
 
+		ConfigEntry<bool> interactable(string key)
+				=> Config.Bind("Interactables", key, defaultValue: true, description: "");
+
+		print = interactable("Printer");
+		scrap = interactable("Scrapper");
+		shrine = interactable("Shrine of Chance");
+		chest = interactable("Chest");
+
 		Harmony.CreateAndPatchAll(typeof(BalancedFasterInteractables));
 	}
 
-	[HarmonyPatch(typeof(ScrapperBaseState), nameof(ScrapperBaseState.OnEnter))]
+	static bool Idle => teleporter.Value && TeleporterInteraction.instance?.currentState
+			is not TeleporterInteraction.ChargedState;
+
 	[HarmonyPatch(typeof(Duplicating), nameof(Duplicating.OnEnter))]
 	[HarmonyPostfix]
-	static void PrintAndScrap(BaseState __instance)
+	static void PrintFaster(Duplicating __instance)
 	{
-		if ( teleporter.Value && TeleporterInteraction.instance?.currentState
-				is not TeleporterInteraction.ChargedState )
-			return;
+		if ( print.Value is false || Idle ) return;
+		float time = speed.Value / 100;
+
+		__instance.GetComponent<DelayedEvent>().action.SetPersistentListenerState(
+				index: 0, state: UnityEventCallState.Off);
+		__instance.GetComponent<PurchaseInteraction>().SetUnavailableTemporarily(
+				time: 4 * ( 1 - time ));
+
+		time *= Duplicating.initialDelayDuration +
+				Duplicating.timeBetweenStartAndDropDroplet;
+
+		__instance.fixedAge += time;
+		UpdateStopwatch(time);
+	}
+
+	[HarmonyPatch(typeof(ScrapperBaseState), nameof(ScrapperBaseState.OnEnter))]
+	[HarmonyPostfix]
+	static void ScrapQuickly(ScrapperBaseState __instance)
+	{
+		if ( scrap.Value is false || Idle ) return;
 
 		float time = speed.Value / 100;
 		switch ( __instance )
 		{
-			case Duplicating:
-				__instance.GetComponent<DelayedEvent>().action.SetPersistentListenerState(
-						index: 0, state: UnityEventCallState.Off);
-				__instance.GetComponent<PurchaseInteraction>().SetUnavailableTemporarily(
-						time: 4 * ( 1 - time ));
-
-				time *= Duplicating.initialDelayDuration +
-						Duplicating.timeBetweenStartAndDropDroplet;
-				break;
-
 			case WaitToBeginScrapping:
 				time *= WaitToBeginScrapping.duration;
 				break;
@@ -102,16 +121,29 @@ class BalancedFasterInteractables : BaseUnityPlugin
 
 	[HarmonyPatch(typeof(ShrineChanceBehavior), nameof(ShrineChanceBehavior.AddShrineStack))]
 	[HarmonyPostfix]
-	static void SpeedUp(ShrineChanceBehavior __instance)
+	static void SpeedUpShrine(ShrineChanceBehavior __instance)
 	{
-		if ( teleporter.Value && TeleporterInteraction.instance?.currentState
-				is not TeleporterInteraction.ChargedState )
-			return;
-
+		if ( shrine.Value is false || Idle ) return;
 		float time = speed.Value / 100 * __instance.refreshTimer;
 
 		__instance.refreshTimer -= time;
 		UpdateStopwatch(time);
+	}
+
+	[HarmonyPatch(typeof(Opening), nameof(Opening.OnEnter))]
+	[HarmonyPostfix]
+	static void OpenChest(EntityState __instance)
+	{
+		if ( chest.Value is false || Idle || __instance.GetComponent<ChestBehavior>() is null )
+			return;
+
+		float rate = speed.Value / 100;
+		UpdateStopwatch(0.45f * Opening.duration * rate);
+
+		if ( rate is 1 ) rate = float.MaxValue;
+		else rate = 1 / ( 1 - rate );
+
+		__instance.GetModelAnimator().SetFloat("Opening.playbackRate", rate);
 	}
 
 	static void UpdateStopwatch(float time)
