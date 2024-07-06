@@ -90,6 +90,14 @@ class BalancedFasterInteractables : BaseUnityPlugin
 		UpdateStopwatch(time);
 	}
 
+	[HarmonyPatch(typeof(Duplicating), nameof(Duplicating.BeginCooking))]
+	[HarmonyPostfix]
+	static void ScaleAnimation(Duplicating __instance)
+	{
+		if ( print.Value is false || Idle ) return;
+		__instance.GetModelAnimator().speed = 125 / ( 125 - speed.Value );
+	}
+
 	[HarmonyPatch(typeof(ScrapperBaseState), nameof(ScrapperBaseState.OnEnter))]
 	[HarmonyPostfix]
 	static void ScrapQuickly(ScrapperBaseState __instance)

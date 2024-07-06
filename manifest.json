@@ -1,7 +1,7 @@
 {
 	"name": "BalancedFasterInteractables",
-	"version_number": "1.0.0",
-	"website_url": "https://www.riskofresources.com/discord",
+	"version_number": "1.1.0",
+	"website_url": "https://github.com/RiskOfResources/BalancedFasterInteractables",
 	"description":
 		"Scrappers, printers, and shrines activate quickly after teleporter, with a time penalty.",
 	"dependencies": [
