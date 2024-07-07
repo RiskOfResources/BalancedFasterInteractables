@@ -151,7 +151,7 @@ class BalancedFasterInteractables : BaseUnityPlugin
 		if ( rate is 1 ) rate = float.MaxValue;
 		else rate = 1 / ( 1 - rate );
 
-		__instance.GetModelAnimator().SetFloat("Opening.playbackRate", rate);
+		__instance.GetModelAnimator().speed = rate;
 	}
 
 	static void UpdateStopwatch(float time)
