@@ -9,6 +9,7 @@ using RoR2;
 using RoR2.EntityLogic;
 using System.Reflection;
 using System.Security.Permissions;
+using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
 
@@ -27,7 +28,7 @@ class BalancedFasterInteractables : BaseUnityPlugin
 
 	static ConfigEntry<bool> teleporter, penalty;
 	static ConfigEntry<float> speed;
-	static ConfigEntry<bool> print, scrap, shrine, chest;
+	static ConfigEntry<bool> printer, scrapper, shrine, chest, cradle;
 
 	protected void Awake()
 	{
@@ -60,10 +61,11 @@ class BalancedFasterInteractables : BaseUnityPlugin
 		ConfigEntry<bool> interactable(string key)
 				=> Config.Bind("Interactables", key, defaultValue: true, description: "");
 
-		print = interactable("Printer");
-		scrap = interactable("Scrapper");
+		printer = interactable("Printer");
+		scrapper = interactable("Scrapper");
 		shrine = interactable("Shrine of Chance");
 		chest = interactable("Chest");
+		cradle = interactable("Void Cradle");
 
 		Harmony.CreateAndPatchAll(typeof(BalancedFasterInteractables));
 	}
@@ -75,7 +77,7 @@ class BalancedFasterInteractables : BaseUnityPlugin
 	[HarmonyPostfix]
 	static void PrintFaster(Duplicating __instance)
 	{
-		if ( print.Value is false || Idle ) return;
+		if ( printer.Value is false || Idle ) return;
 		float time = speed.Value / 100;
 
 		__instance.GetComponent<DelayedEvent>().action.SetPersistentListenerState(
@@ -94,7 +96,7 @@ class BalancedFasterInteractables : BaseUnityPlugin
 	[HarmonyPostfix]
 	static void ScaleAnimation(Duplicating __instance)
 	{
-		if ( print.Value is false || Idle ) return;
+		if ( printer.Value is false || Idle ) return;
 		__instance.GetModelAnimator().speed = 125 / ( 125 - speed.Value );
 	}
 
@@ -102,7 +104,7 @@ class BalancedFasterInteractables : BaseUnityPlugin
 	[HarmonyPostfix]
 	static void ScrapQuickly(ScrapperBaseState __instance)
 	{
-		if ( scrap.Value is false || Idle ) return;
+		if ( scrapper.Value is false || Idle ) return;
 
 		float time = speed.Value / 100;
 		switch ( __instance )
@@ -152,6 +154,49 @@ class BalancedFasterInteractables : BaseUnityPlugin
 		else rate = 1 / ( 1 - rate );
 
 		__instance.GetModelAnimator().speed = rate;
+	}
+
+	[HarmonyPatch(typeof(OpeningLunar), nameof(OpeningLunar.OnEnter))]
+	[HarmonyPostfix]
+	static void CrackThatSuckerOpen(BaseState __instance)
+	{
+		if ( cradle.Value is false || Idle ) return;
+		float time = speed.Value / 100, rate = 1 - time;
+
+		if ( ! __instance.GetComponent<ScriptedCombatEncounter>() )
+		{
+			time *= 0.125f;
+			rate += time;
+		}
+
+		time *= OpeningLunar.duration;
+		rate = rate is 0 ? float.MaxValue : 1 / rate;
+
+		__instance.fixedAge += time;
+		UpdateStopwatch(time);
+
+		__instance.GetModelAnimator().speed = rate;
+	}
+
+	[HarmonyPatch(typeof(PurchaseInteraction), nameof(PurchaseInteraction.OnInteractionBegin))]
+	[HarmonyPrefix]
+	static void TryToInfest(PurchaseInteraction __instance)
+	{
+		if ( cradle.Value is false || Idle )
+			return;
+
+		foreach ( PersistentCall listener in __instance.onPurchase.m_PersistentCalls.m_Calls )
+		{
+			if ( listener.target is not DelayedEvent delay )
+				continue;
+
+			foreach ( PersistentCall callback in delay.action.m_PersistentCalls.m_Calls )
+				if ( callback.target is ScriptedCombatEncounter )
+				{
+					listener.arguments.floatArgument *= 1 - speed.Value / 95f;
+					break;
+				}
+		}
 	}
 
 	static void UpdateStopwatch(float time)
