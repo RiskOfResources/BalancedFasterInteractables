@@ -28,7 +28,7 @@ class BalancedFasterInteractables : BaseUnityPlugin
 
 	static ConfigEntry<bool> teleporter, penalty;
 	static ConfigEntry<float> speed;
-	static ConfigEntry<bool> printer, scrapper, shrine, chest, cradle;
+	static ConfigEntry<bool> printer, scrapper, shrine, chest, cradle, pool;
 
 	protected void Awake()
 	{
@@ -66,6 +66,7 @@ class BalancedFasterInteractables : BaseUnityPlugin
 		shrine = interactable("Shrine of Chance");
 		chest = interactable("Chest");
 		cradle = interactable("Void Cradle");
+		pool = interactable("Cleansing Pool");
 
 		Harmony.CreateAndPatchAll(typeof(BalancedFasterInteractables));
 	}
@@ -197,6 +198,26 @@ class BalancedFasterInteractables : BaseUnityPlugin
 					break;
 				}
 		}
+	}
+
+	[HarmonyPatch(typeof(PurchaseInteraction), nameof(PurchaseInteraction.OnInteractionBegin))]
+	[HarmonyPrefix]
+	static void CleanseRapidly(PurchaseInteraction __instance)
+	{
+		UnityEvent action = null;
+
+		if ( __instance.isShrine && __instance.costType is CostTypeIndex.LunarItemOrEquipment )
+		{
+			if ( pool.Value is false || Idle ) return;
+			action = __instance.GetComponent<DelayedEvent>()?.action;
+		}
+
+		if ( action is null ) return;
+
+		action.SetPersistentListenerState(
+				index: action.GetPersistentEventCount() - 1, state: UnityEventCallState.Off);
+
+		__instance.SetUnavailableTemporarily(1.5f - speed.Value / 70f);
 	}
 
 	static void UpdateStopwatch(float time)

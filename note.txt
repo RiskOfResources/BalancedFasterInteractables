@@ -55,4 +55,18 @@ VoidChest
 
 LunarChest
 	...
+			OpeningLunar.PlayAnimation
+	...
 		AnimationEvents: ~0.125
+
+ShrineCleanse
+	PurchaseInteraction.onPurchase
+		SetAvailable(false)
+		DelayedEvent.CallDelayed(1.5)
+	DelayedEvent.action
+		ShopTerminalBehavior
+			DropPickup
+			SetHasBeenPurchased
+			GenerateNewPickupServer
+		PurchaseInteraction
+			SetAvailable(true)
