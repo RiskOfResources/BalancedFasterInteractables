@@ -9,7 +9,6 @@ using RoR2;
 using RoR2.EntityLogic;
 using System.Reflection;
 using System.Security.Permissions;
-using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
 
@@ -24,7 +23,7 @@ namespace RiskOfResources;
 [BepInIncompatibility("Felda.ActuallyFaster")]
 class BalancedFasterInteractables : BaseUnityPlugin
 {
-	public const string version = "1.1.0", identifier = "com.riskofresources.fast.interactable";
+	public const string version = "1.2.0", identifier = "com.riskofresources.fast.interactable";
 
 	static ConfigEntry<bool> teleporter, penalty;
 	static ConfigEntry<float> speed;
