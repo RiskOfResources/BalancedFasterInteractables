@@ -7,8 +7,11 @@ using EntityStates.Scrapper;
 using HarmonyLib;
 using RoR2;
 using RoR2.EntityLogic;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Security.Permissions;
+using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
 
@@ -70,18 +73,18 @@ class BalancedFasterInteractables : BaseUnityPlugin
 		Harmony.CreateAndPatchAll(typeof(BalancedFasterInteractables));
 	}
 
-	static bool Idle => teleporter.Value && TeleporterInteraction.instance?.currentState
-			is not TeleporterInteraction.ChargedState;
+	static bool Idle => teleporter.Value && CombatDirector.instancesList.Any();
 
 	[HarmonyPatch(typeof(Duplicating), nameof(Duplicating.OnEnter))]
 	[HarmonyPostfix]
 	static void PrintFaster(Duplicating __instance)
 	{
-		if ( printer.Value is false || Idle ) return;
+		bool idle = printer.Value is false || Idle;
+		__instance.GetComponent<DelayedEvent>().enabled = idle;
+
+		if ( idle ) return;
 		float time = speed.Value / 100;
 
-		__instance.GetComponent<DelayedEvent>().action.SetPersistentListenerState(
-				index: 0, state: UnityEventCallState.Off);
 		__instance.GetComponent<PurchaseInteraction>().SetUnavailableTemporarily(
 				time: 4 * ( 1 - time ));
 
@@ -182,41 +185,20 @@ class BalancedFasterInteractables : BaseUnityPlugin
 	[HarmonyPrefix]
 	static void TryToInfest(PurchaseInteraction __instance)
 	{
-		if ( cradle.Value is false || Idle )
-			return;
-
-		foreach ( PersistentCall listener in __instance.onPurchase.m_PersistentCalls.m_Calls )
-		{
-			if ( listener.target is not DelayedEvent delay )
-				continue;
-
-			foreach ( PersistentCall callback in delay.action.m_PersistentCalls.m_Calls )
-				if ( callback.target is ScriptedCombatEncounter )
-				{
-					listener.arguments.floatArgument *= 1 - speed.Value / 95f;
-					break;
-				}
-		}
+		if ( cradle.Value is false || Idle ) PurchaseDelay.Remove(__instance);
+		else if ( __instance.GetComponent<ScriptedCombatEncounter>() )
+			PurchaseDelay.Set(__instance, 1 - speed.Value / 95);
 	}
 
 	[HarmonyPatch(typeof(PurchaseInteraction), nameof(PurchaseInteraction.OnInteractionBegin))]
 	[HarmonyPrefix]
 	static void CleanseRapidly(PurchaseInteraction __instance)
 	{
-		UnityEvent action = null;
-
 		if ( __instance.isShrine && __instance.costType is CostTypeIndex.LunarItemOrEquipment )
 		{
-			if ( pool.Value is false || Idle ) return;
-			action = __instance.GetComponent<DelayedEvent>()?.action;
+			if ( pool.Value is false || Idle ) PurchaseDelay.Remove(__instance);
+			else PurchaseDelay.Set(__instance, 1 - speed.Value / 100);
 		}
-
-		if ( action is null ) return;
-
-		action.SetPersistentListenerState(
-				index: action.GetPersistentEventCount() - 1, state: UnityEventCallState.Off);
-
-		__instance.SetUnavailableTemporarily(1.5f - speed.Value / 70f);
 	}
 
 	static void UpdateStopwatch(float time)
@@ -224,5 +206,57 @@ class BalancedFasterInteractables : BaseUnityPlugin
 		Run instance = Run.instance;
 		if ( penalty.Value && instance && NetworkServer.active )
 			instance.SetRunStopwatch(instance.GetRunStopwatch() + time);
+	}
+
+	class PurchaseDelay : MonoBehaviour
+	{
+		internal static void Set(PurchaseInteraction interaction, float multiplier)
+		{
+			IEnumerable<PurchaseDelay> components = interaction.GetComponents<PurchaseDelay>();
+			if ( components.Any() is false ) components = Initialize(interaction);
+
+			foreach ( PurchaseDelay component in components )
+				component.Update(multiplier);
+
+			interaction.onPurchase.DirtyPersistentCalls();
+		}
+
+		internal static void Remove(PurchaseInteraction interaction)
+		{
+			foreach ( var instance in interaction.gameObject.GetComponents<PurchaseDelay>() )
+			{
+				instance.Reset();
+				MonoBehaviour.Destroy(instance);
+			}
+		}
+
+		ArgumentCache delay;
+		float original;
+
+		void Update(float multiplier)
+		{
+			delay.floatArgument = original * multiplier;
+		}
+
+		void Reset()
+		{
+			delay.floatArgument = original;
+		}
+
+		static IEnumerable<PurchaseDelay> Initialize(PurchaseInteraction interaction)
+		{
+			const string method = nameof(DelayedEvent.CallDelayed);
+
+			foreach ( PersistentCall call in interaction.onPurchase.m_PersistentCalls.m_Calls )
+				if ( call.target is DelayedEvent delay && call.methodName is method )
+				{
+					var instance = interaction.gameObject.AddComponent<PurchaseDelay>();
+
+					instance.delay = call.arguments;
+					instance.original = instance.delay.floatArgument;
+
+					yield return instance;
+				}
+		}
 	}
 }
