@@ -70,3 +70,12 @@ ShrineCleanse
 			GenerateNewPickupServer
 		PurchaseInteraction
 			SetAvailable(true)
+
+LunarCauldron
+	PurchaseInteraction.onPurchase
+	SetAvailable(false)
+		DelayedEvent.CallDelayed(1.5)
+	DelayedEvent.action
+		ShopTerminalBehavior.DropPickup
+		PurchaseInteraction.SetAvailable(true)
+		...

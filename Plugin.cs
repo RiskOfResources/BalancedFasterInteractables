@@ -26,11 +26,11 @@ namespace RiskOfResources;
 [BepInIncompatibility("Felda.ActuallyFaster")]
 class BalancedFasterInteractables : BaseUnityPlugin
 {
-	public const string version = "1.2.0", identifier = "com.riskofresources.fast.interactable";
+	public const string version = "1.3.0", identifier = "com.riskofresources.fast.interactable";
 
 	static ConfigEntry<bool> teleporter, penalty;
 	static ConfigEntry<float> speed;
-	static ConfigEntry<bool> printer, scrapper, shrine, chest, cradle, pool;
+	static ConfigEntry<bool> printer, scrapper, shrine, chest, cradle, pool, cauldron;
 
 	protected void Awake()
 	{
@@ -69,11 +69,12 @@ class BalancedFasterInteractables : BaseUnityPlugin
 		chest = interactable("Chest");
 		cradle = interactable("Void Cradle");
 		pool = interactable("Cleansing Pool");
+		cauldron = interactable("Lunar Cauldron");
 
 		Harmony.CreateAndPatchAll(typeof(BalancedFasterInteractables));
 	}
 
-	static bool Idle => teleporter.Value && CombatDirector.instancesList.Any();
+	static bool Idle => teleporter.Value && CombatDirector.instancesList.Count > 0;
 
 	[HarmonyPatch(typeof(Duplicating), nameof(Duplicating.OnEnter))]
 	[HarmonyPostfix]
@@ -185,9 +186,11 @@ class BalancedFasterInteractables : BaseUnityPlugin
 	[HarmonyPrefix]
 	static void TryToInfest(PurchaseInteraction __instance)
 	{
-		if ( cradle.Value is false || Idle ) PurchaseDelay.Remove(__instance);
-		else if ( __instance.GetComponent<ScriptedCombatEncounter>() )
-			PurchaseDelay.Set(__instance, 1 - speed.Value / 95);
+		if ( __instance.GetComponent<ScriptedCombatEncounter>() )
+		{
+			if ( cradle.Value is false || Idle ) PurchaseDelay.Remove(__instance);
+			else PurchaseDelay.Set(__instance, 1 - speed.Value / 95, false);
+		}
 	}
 
 	[HarmonyPatch(typeof(PurchaseInteraction), nameof(PurchaseInteraction.OnInteractionBegin))]
@@ -197,27 +200,43 @@ class BalancedFasterInteractables : BaseUnityPlugin
 		if ( __instance.isShrine && __instance.costType is CostTypeIndex.LunarItemOrEquipment )
 		{
 			if ( pool.Value is false || Idle ) PurchaseDelay.Remove(__instance);
-			else PurchaseDelay.Set(__instance, 1 - speed.Value / 100);
+			else PurchaseDelay.Set(__instance, 1 - speed.Value / 100, true);
+		}
+	}
+
+	[HarmonyPatch(typeof(PurchaseInteraction), nameof(PurchaseInteraction.OnInteractionBegin))]
+	[HarmonyPrefix]
+	static void CookSoup(PurchaseInteraction __instance)
+	{
+		if ( __instance.contextToken is "BAZAAR_CAULDRON_CONTEXT" )
+		{
+			if ( cauldron.Value is false || Idle ) PurchaseDelay.Remove(__instance);
+			else PurchaseDelay.Set(__instance, 1 - speed.Value / 100, true);
 		}
 	}
 
 	static void UpdateStopwatch(float time)
 	{
 		Run instance = Run.instance;
-		if ( penalty.Value && instance && NetworkServer.active )
+		if ( penalty.Value && instance?.isRunStopwatchPaused is false && NetworkServer.active )
 			instance.SetRunStopwatch(instance.GetRunStopwatch() + time);
 	}
 
 	class PurchaseDelay : MonoBehaviour
 	{
-		internal static void Set(PurchaseInteraction interaction, float multiplier)
+		internal static void Set(PurchaseInteraction interaction, float multiplier, bool timed)
 		{
 			IEnumerable<PurchaseDelay> components = interaction.GetComponents<PurchaseDelay>();
 			if ( components.Any() is false ) components = Initialize(interaction);
 
+			float duration = 0;
 			foreach ( PurchaseDelay component in components )
+			{
 				component.Update(multiplier);
+				duration = Mathf.Max(component.original, duration);
+			}
 
+			if ( timed ) UpdateStopwatch(duration - duration * multiplier);
 			interaction.onPurchase.DirtyPersistentCalls();
 		}
 
@@ -225,6 +244,8 @@ class BalancedFasterInteractables : BaseUnityPlugin
 		{
 			foreach ( var instance in interaction.gameObject.GetComponents<PurchaseDelay>() )
 			{
+				interaction.onPurchase.DirtyPersistentCalls();
+
 				instance.Reset();
 				MonoBehaviour.Destroy(instance);
 			}
