@@ -26,7 +26,7 @@ namespace RiskOfResources;
 [BepInIncompatibility("Felda.ActuallyFaster")]
 class BalancedFasterInteractables : BaseUnityPlugin
 {
-	public const string version = "1.3.0", identifier = "com.riskofresources.fast.interactable";
+	public const string version = "1.3.1", identifier = "com.riskofresources.fast.interactable";
 
 	static ConfigEntry<bool> teleporter, penalty;
 	static ConfigEntry<float> speed;
@@ -40,8 +40,8 @@ class BalancedFasterInteractables : BaseUnityPlugin
 				section, key: "Only After Teleporter",
 				defaultValue: true,
 				description:
-					"By default, this plugin will only take effect on stages with a " +
-					"teleporter, after it has been charged."
+					"By default, this plugin will only take effect after the teleporter " +
+					"has been charged, or all combat directors have deactivated."
 			);
 
 		penalty = Config.Bind(
@@ -74,7 +74,8 @@ class BalancedFasterInteractables : BaseUnityPlugin
 		Harmony.CreateAndPatchAll(typeof(BalancedFasterInteractables));
 	}
 
-	static bool Idle => teleporter.Value && CombatDirector.instancesList.Count > 0;
+	static bool Idle => teleporter.Value && TeleporterInteraction.instance?.currentState
+			is not TeleporterInteraction.ChargedState && CombatDirector.instancesList.Count > 0;
 
 	[HarmonyPatch(typeof(Duplicating), nameof(Duplicating.OnEnter))]
 	[HarmonyPostfix]

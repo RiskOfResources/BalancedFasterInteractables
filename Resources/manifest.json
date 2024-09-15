@@ -1,6 +1,6 @@
 {
 	"name": "BalancedFasterInteractables",
-	"version_number": "1.3.0",
+	"version_number": "1.3.1",
 	"website_url": "https://github.com/RiskOfResources/BalancedFasterInteractables",
 	"description":
 		"Scrappers, printers, etc. activate quickly after teleporter, with a time penalty.",
