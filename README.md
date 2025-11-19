@@ -25,6 +25,9 @@ Please report any issues discovered [here](https://github.com/RiskOfResources/Ba
 
 ## Version History
 
+#### `1.3.2`
+- Handle minor change made in *Alloyed Collective* patch.
+
 #### `1.3.1`
 - Update logic for <ins>Halcyon Shrine</ins> director.
 

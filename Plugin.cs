@@ -26,7 +26,7 @@ namespace RiskOfResources;
 [BepInIncompatibility("Felda.ActuallyFaster")]
 class BalancedFasterInteractables : BaseUnityPlugin
 {
-	public const string version = "1.3.1", identifier = "com.riskofresources.fast.interactable";
+	public const string version = "1.3.2", identifier = "com.riskofresources.fast.interactable";
 
 	static ConfigEntry<bool> teleporter, penalty;
 	static ConfigEntry<float> speed;
@@ -82,13 +82,17 @@ class BalancedFasterInteractables : BaseUnityPlugin
 	static void PrintFaster(Duplicating __instance)
 	{
 		bool idle = printer.Value is false || Idle;
-		__instance.GetComponent<DelayedEvent>().enabled = idle;
+		if ( __instance.outer.TryGetComponent(out DelayedEvent delayed) )
+			delayed.enabled = idle;
 
 		if ( idle ) return;
 		float time = speed.Value / 100;
 
-		__instance.GetComponent<PurchaseInteraction>().SetUnavailableTemporarily(
-				time: 4 * ( 1 - time ));
+		if ( delayed )
+		{
+			__instance.GetComponent<PurchaseInteraction>().SetUnavailableTemporarily(
+					time: 4 * ( 1 - time ));
+		}
 
 		time *= Duplicating.initialDelayDuration +
 				Duplicating.timeBetweenStartAndDropDroplet;
