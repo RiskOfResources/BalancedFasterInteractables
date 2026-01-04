@@ -5,6 +5,8 @@ using EntityStates.Barrel;
 using EntityStates.Duplicator;
 using EntityStates.Scrapper;
 using HarmonyLib;
+using MonoMod.Cil;
+using Mono.Cecil.Cil;
 using RoR2;
 using RoR2.EntityLogic;
 using System.Collections.Generic;
@@ -81,18 +83,16 @@ class BalancedFasterInteractables : BaseUnityPlugin
 	[HarmonyPostfix]
 	static void PrintFaster(Duplicating __instance)
 	{
-		bool idle = printer.Value is false || Idle;
 		if ( __instance.outer.TryGetComponent(out DelayedEvent delayed) )
-			delayed.enabled = idle;
+			delayed.enabled = false;
+
+		bool idle = printer.Value is false || Idle;
+		float time = idle ? 0.15f : speed.Value / 100;
+
+		__instance.GetComponent<PurchaseInteraction>().SetUnavailableTemporarily(
+				Time.fixedDeltaTime + 4 * ( 1 - time ));
 
 		if ( idle ) return;
-		float time = speed.Value / 100;
-
-		if ( delayed )
-		{
-			__instance.GetComponent<PurchaseInteraction>().SetUnavailableTemporarily(
-					time: 4 * ( 1 - time ));
-		}
 
 		time *= Duplicating.initialDelayDuration +
 				Duplicating.timeBetweenStartAndDropDroplet;
@@ -107,6 +107,28 @@ class BalancedFasterInteractables : BaseUnityPlugin
 	{
 		if ( printer.Value is false || Idle ) return;
 		__instance.GetModelAnimator().speed = 125 / ( 125 - speed.Value );
+	}
+
+	[HarmonyPatch(typeof(Duplicating), nameof(Duplicating.OnExit))]
+	[HarmonyILManipulator]
+	static void ApplyCooldown(ILContext context)
+	{
+		ILCursor cursor = new(context);
+		ILLabel label = cursor.DefineLabel();
+
+		if ( cursor.TryGotoNext(( Instruction i ) => i.MatchCall<PurchaseInteraction>(
+				nameof(PurchaseInteraction.SetAvailable) )) )
+		{
+			cursor.Emit(OpCodes.Ldc_I4_1);
+			cursor.Emit(OpCodes.Brtrue, label);
+			++cursor.Index;
+			cursor.Emit(OpCodes.Ldnull);
+			cursor.Emit(OpCodes.Ldc_I4_0);
+			cursor.MarkLabel(label);
+			cursor.Emit(OpCodes.Pop);
+			cursor.Emit(OpCodes.Pop);
+		}
+		else Debug.LogError("Unable to apply cooldown on printer.");
 	}
 
 	[HarmonyPatch(typeof(ScrapperBaseState), nameof(ScrapperBaseState.OnEnter))]
