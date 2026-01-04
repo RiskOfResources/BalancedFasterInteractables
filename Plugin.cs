@@ -9,6 +9,7 @@ using MonoMod.Cil;
 using Mono.Cecil.Cil;
 using RoR2;
 using RoR2.EntityLogic;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -17,22 +18,23 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
 
-[assembly: AssemblyVersion(RiskOfResources.BalancedFasterInteractables.version)]
+[assembly: AssemblyVersion(BalancedFasterInteractables.Plugin.version)]
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
 
-namespace RiskOfResources;
+namespace BalancedFasterInteractables;
 
 [BepInPlugin(identifier, nameof(BalancedFasterInteractables), version)]
 [BepInIncompatibility("riskofresources.FasterInteractableBalancer")]
 [BepInIncompatibility("FlyingComputer.ExchangeChanges")]
 [BepInIncompatibility("Felda.ActuallyFaster")]
-class BalancedFasterInteractables : BaseUnityPlugin
+class Plugin : BaseUnityPlugin
 {
 	public const string version = "1.3.2", identifier = "com.riskofresources.fast.interactable";
 
 	static ConfigEntry<bool> teleporter, penalty;
-	static ConfigEntry<float> speed;
+	static internal ConfigEntry<float> speed;
 	static ConfigEntry<bool> printer, scrapper, shrine, chest, cradle, pool, cauldron;
+	static internal ConfigEntry<bool> upgrade, craft;
 
 	protected void Awake()
 	{
@@ -72,12 +74,15 @@ class BalancedFasterInteractables : BaseUnityPlugin
 		cradle = interactable("Void Cradle");
 		pool = interactable("Cleansing Pool");
 		cauldron = interactable("Lunar Cauldron");
+		upgrade = interactable("Drone Combiner Station");
+		craft = interactable("Wandering CHEF");
 
-		Harmony.CreateAndPatchAll(typeof(BalancedFasterInteractables));
+		Harmony.CreateAndPatchAll(typeof(Plugin));
+		Harmony.CreateAndPatchAll(typeof(Update));
 	}
 
-	static bool Idle => teleporter.Value && TeleporterInteraction.instance?.currentState
-			is not TeleporterInteraction.ChargedState && CombatDirector.instancesList.Count > 0;
+	static public bool Idle => teleporter.Value && TeleporterInteraction.instance?.currentState
+			is not TeleporterInteraction.ChargedState && CombatDirector.instancesList.Any();
 
 	[HarmonyPatch(typeof(Duplicating), nameof(Duplicating.OnEnter))]
 	[HarmonyPostfix]
@@ -242,7 +247,7 @@ class BalancedFasterInteractables : BaseUnityPlugin
 		}
 	}
 
-	static void UpdateStopwatch(float time)
+	internal static void UpdateStopwatch(float time)
 	{
 		Run instance = Run.instance;
 		if ( penalty.Value && instance?.isRunStopwatchPaused is false && NetworkServer.active )

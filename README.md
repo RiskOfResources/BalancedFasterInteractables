@@ -10,10 +10,11 @@ Have you found yourself unable to give up faster interactables, yet concerned ab
 	- Void Cradle & Lunar Pod
 	- Cleansing Pool
 	- Lunar Cauldron
+	- & More...
 - Only applied while combat directors are inactive.
 - Any time saved gets directly added to the game stopwatch.
 
-Each of these features is configurable, including the speed (from **0** to **100**% time reduction). Use a text editor or [**r2modman**](https://thunderstore.io/package/ebkr/r2modman) to edit the file in your `BepInEx/config` folder named `com.riskofresources.fast.interactable.cfg` after launching the game.
+Each of the above features are configurable, including the speed (from **0** to **100**% time reduction). Use a text editor or [**r2modman**](https://thunderstore.io/package/ebkr/r2modman) to edit the file in your `BepInEx/config` folder named `com.riskofresources.fast.interactable.cfg` after launching the game.
 
 While similar to [**FasterInteractableBalancer**](https://thunderstore.io/package/riskofresources/FasterInteractableBalancer), please note that this is a standalone mod and should not be installed alongside [**Exchange_Changes**](https://thunderstore.io/package/Flyingcomputer/Exchange_Changes) or [**Actually_Faster**](https://thunderstore.io/package/Felda/Actually_Faster). Though a different implementation is used, credit should be given since they provided a useful reference.
 
@@ -25,8 +26,12 @@ Please report any issues discovered [here](https://github.com/RiskOfResources/Ba
 
 ## Version History
 
+#### `1.4.0`
+- Implement capability to speed up <ins>Drone Scrapper</ins> and <ins>Combiner Station</ins>, as well as <ins>Wandering CHEF</ins>.
+- Other animation improvements.
+
 #### `1.3.2`
-- Handle minor change made in *Alloyed Collective* patch.
+- Handle minor change made in **Alloyed Collective** patch.
 
 #### `1.3.1`
 - Update logic for <ins>Halcyon Shrine</ins> director.
