@@ -1,20 +1,19 @@
+global using BepInEx.Configuration;
+global using EntityStates;
+global using HarmonyLib;
+global using Mono.Cecil.Cil;
+global using MonoMod.Cil;
+global using RoR2;
+global using System.Reflection;
+global using UnityEngine;
 using BepInEx;
-using BepInEx.Configuration;
-using EntityStates;
 using EntityStates.Barrel;
 using EntityStates.Duplicator;
 using EntityStates.Scrapper;
-using HarmonyLib;
-using MonoMod.Cil;
-using Mono.Cecil.Cil;
-using RoR2;
 using RoR2.EntityLogic;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Security.Permissions;
-using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
 
@@ -29,12 +28,12 @@ namespace BalancedFasterInteractables;
 [BepInIncompatibility("Felda.ActuallyFaster")]
 class Plugin : BaseUnityPlugin
 {
-	public const string version = "1.3.2", identifier = "com.riskofresources.fast.interactable";
+	public const string version = "1.4.0", identifier = "com.riskofresources.fast.interactable";
 
 	static ConfigEntry<bool> teleporter, penalty;
 	static internal ConfigEntry<float> speed;
-	static ConfigEntry<bool> printer, scrapper, shrine, chest, cradle, pool, cauldron;
-	static internal ConfigEntry<bool> upgrade, craft;
+	static ConfigEntry<bool> printer, shrine, chest, cradle, pool, cauldron;
+	static internal ConfigEntry<bool> scrapper, upgrade, craft;
 
 	protected void Awake()
 	{
